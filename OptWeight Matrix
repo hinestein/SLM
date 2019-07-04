@@ -1,0 +1,76 @@
+Opt.Weight = function(formula, data, locations = NULL, WMatrix = NULL, k.start = 1, alpha.start = 0, increment = 0.1, intercept = TRUE, Durbin = FALSE, 
+                      complete = FALSE, tol = 10^(-5), omit = FALSE, method = c("IDW", "Gaussian"), LR = FALSE){
+  d1 = 0
+  s3 = Inf
+  alpha = alpha.start
+  while(d1 == 0){
+    Smod1 = SLM(formula, data, locations = locations, k = k.start, alpha = alpha, intercept = intercept, Durbin = Durbin, 
+                complete = complete, tol = 10^(-5), omit = omit, method = method, LR = LR)
+    s2 = Smod1$sigma
+    if(s2 < s3){
+      s3 = s2
+      alpha = alpha + increment
+    }else{
+      d1 = 1
+      s4 = s2
+    }
+  }
+  k2 = k.start
+  alpha1 = alpha
+  k = k.start + 1
+  d3 = 0
+  while(d3 == 0){
+    s3 = Inf
+    d2 = 0
+    int = 0
+    Smod1 = SLM(formula, data, locations = locations, k = k, alpha = alpha, intercept = intercept, Durbin = Durbin, 
+                complete = complete, tol = 10^(-5), omit = omit, method = method, LR = LR)
+    ss2 = Smod1$sigma
+    Smod2 = SLM(formula, data, locations = locations, k = k, alpha = alpha + increment, intercept = intercept, Durbin = Durbin, 
+                complete = complete, tol = 10^(-5), omit = omit, method = method, LR = LR)
+    ss3 = Smod2$sigma
+    if(ss3 < ss2){
+      ss2 = ss3
+      int = 1
+      alpha = alpha + increment
+      alpha2 = alpha
+    }else if(alpha > 0){
+      Smod3 = SLM(formula, data, locations = locations, k = k, alpha = alpha - increment, intercept = intercept, Durbin = Durbin, 
+                  complete = complete, tol = 10^(-5), omit = omit, method = method, LR = LR)
+      ss4 = Smod3$sigma
+      if(ss4 < ss2){
+        ss2 = ss4
+        int = -1
+        alpha = alpha - increment
+        alpha2 = alpha
+      }
+    }
+    if(int != 0){
+      while(d2 == 0){
+        alpha = alpha + int * increment
+        Smod1 = SLM(formula, data, locations = locations, k = k, alpha = alpha, intercept = intercept, Durbin = Durbin, 
+                    complete = complete, tol = 10^(-5), omit = omit, method = method, LR = LR)
+        ss22 = Smod1$sigma
+        if(ss22 > ss2){
+          alpha2 = alpha - int * increment
+          d2 = 1
+        }else{
+          ss2 = ss22
+          if(alpha + int * increment < 0){
+            d2 = 1
+            alpha2 = alpha
+          }
+        }
+      }
+    }
+    if(ss2 < s4){
+      s4 = ss2
+      alpha1 = alpha2
+      k2 = k
+      k = k + 1
+    }else{
+      d3 = 1
+    }
+  }
+  c(k2, alpha1)
+}
